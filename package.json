@@ -1,0 +1,10 @@
+{
+  "name": "stayconnect",
+  "version": "1.0.0",
+  "description": "Student PG Finder Web App",
+  "scripts": {
+    "start": "firebase serve --only hosting",
+    "deploy": "firebase deploy --only hosting"
+  },
+  "dependencies": {}
+}

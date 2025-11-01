@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Map View | StayConnect</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="header-placeholder"></div>
+
+  <!-- Directions Panel (initially hidden) -->
+  <div id="directionsPanel" class="directions-panel">
+    <div class="directions-header">
+      <h6>Directions</h6>
+      <button class="btn-close" onclick="clearRoute()">×</button>
+    </div>
+    <div id="directionsInstructions" class="directions-instructions">
+      <!-- Directions will be inserted here by Google Maps -->
+    </div>
+  </div>
+
+  <!-- Loading indicator -->
+  <div id="mapLoading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Loading map...</p>
+  </div>
+
+  <div id="map" class="map-container" style="display: none;"></div>
+
+  <div id="footer-placeholder"></div>
+
+  <!-- Script loading order -->
+  <script src="../config/firebaseConfig.js"></script>
+  <script src="../src/js/app.js"></script>
+  <script src="../src/js/utils.js"></script>
+  <script src="../src/js/map.js"></script>
+
+  <script>
+    // Load components
+    (async function loadComponents(){
+      try {
+        const [navbar, footer] = await Promise.all([
+          fetch('../src/components/navbar.html').then(r => r.text()),
+          fetch('../src/components/footer.html').then(r => r.text())
+        ]);
+        document.getElementById('header-placeholder').innerHTML = navbar;
+        document.getElementById('footer-placeholder').innerHTML = footer;
+      } catch (err) {
+        console.error('Failed to load components:', err);
+      }
+    })();
+
+    // Initialize directions panel for Google Maps
+    window.addEventListener('firebaseReady', function() {
+      console.log('Map page: Firebase ready, loading Google Maps...');
+      loadGoogleMaps();
+    });
+
+    function loadGoogleMaps() {
+      console.log('Loading Google Maps for map page...');
+      
+      const script = document.createElement('script');
+      script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyB8qAgA-q9hOa4Kbn2zsPeRBZsKaWp7TfA&callback=onMapsLoaded';
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+
+    window.onMapsLoaded = function() {
+      console.log('Google Maps loaded on map page');
+      
+      document.getElementById('mapLoading').style.display = 'none';
+      document.getElementById('map').style.display = 'block';
+      
+      // Set up directions panel
+      const directionsPanel = document.getElementById('directionsPanel');
+      if (directionsPanel) {
+        directionsPanel.style.display = 'none'; // Hide initially
+      }
+      
+      if (typeof window.initMap === 'function') {
+        window.initMap();
+      }
+    };
+  </script>
+</body>
+</html>

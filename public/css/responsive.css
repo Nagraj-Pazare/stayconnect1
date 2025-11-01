@@ -1,0 +1,94 @@
+/* responsive.css - IMPROVED VERSION */
+@media (max-width: 1200px) {
+  .hero h1 {
+    font-size: 3rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .navbar nav {
+    gap: 1rem;
+  }
+  
+  .hero {
+    height: 60vh;
+  }
+  
+  .hero h1 {
+    font-size: 2.2rem;
+  }
+  
+  .hero p {
+    font-size: 1.1rem;
+  }
+  
+  .search-bar {
+    flex-direction: column;
+    border-radius: var(--radius);
+  }
+  
+  .search-bar input,
+  .search-bar button {
+    border-radius: var(--radius);
+    margin: 0;
+  }
+  
+  .pg-list h2 {
+    font-size: 2rem;
+  }
+  
+  .auth-container {
+    margin: 2rem 1rem;
+    padding: 2rem;
+  }
+  
+  .form-container {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+  
+  .detail-content {
+    padding: 1.5rem;
+  }
+  
+  .detail-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 576px) {
+  .hero {
+    height: 50vh;
+  }
+  
+  .hero h1 {
+    font-size: 1.8rem;
+  }
+  
+  .hero p {
+    font-size: 1rem;
+  }
+  
+  .pg-card .actions {
+    flex-direction: column;
+  }
+  
+  .auth-container {
+    padding: 1.5rem;
+  }
+  
+  .navbar nav {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .pg-list {
+    padding: 2rem 0;
+  }
+}

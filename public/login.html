@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login | StayConnect</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="header-placeholder"></div>
+
+  <div class="auth-container">
+    <h2>Login</h2>
+    <form id="loginForm">
+      <input id="email" type="email" placeholder="Email" required />
+      <input id="password" type="password" placeholder="Password" required />
+      <button type="submit">Login</button>
+    </form>
+    <p>Don't have an account? <a href="register.html">Register</a></p>
+  </div>
+
+  <div id="footer-placeholder"></div>
+
+  <!-- SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <script src="../config/firebaseConfig.js"></script>
+  <script src="../src/js/app.js"></script>
+  <script src="../src/js/utils.js"></script>
+  <script src="../src/js/auth.js"></script>
+  <script src="../src/js/pg.js"></script>
+  <script src="../src/js/map.js"></script>
+
+  <script>
+    (async function loadComponents(){
+      document.getElementById('header-placeholder').innerHTML = await fetch('../src/components/navbar.html').then(r=>r.text());
+      document.getElementById('footer-placeholder').innerHTML = await fetch('../src/components/footer.html').then(r=>r.text());
+    })();
+  </script>
+</body>
+</html>
