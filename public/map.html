@@ -5,19 +5,15 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Map View | StayConnect</title>
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
   <div id="header-placeholder"></div>
 
-  <!-- Directions Panel (initially hidden) -->
-  <div id="directionsPanel" class="directions-panel">
-    <div class="directions-header">
-      <h6>Directions</h6>
-      <button class="btn-close" onclick="clearRoute()">×</button>
-    </div>
-    <div id="directionsInstructions" class="directions-instructions">
-      <!-- Directions will be inserted here by Google Maps -->
-    </div>
+  <!-- Location Indicator -->
+  <div id="locationIndicator" class="location-indicator">
+    <i class="fas fa-map-marker-alt me-1"></i>
+    <span id="locationText">No start location set</span>
   </div>
 
   <!-- Loading indicator -->
@@ -53,7 +49,6 @@
       }
     })();
 
-    // Initialize directions panel for Google Maps
     window.addEventListener('firebaseReady', function() {
       console.log('Map page: Firebase ready, loading Google Maps...');
       loadGoogleMaps();
@@ -74,12 +69,6 @@
       
       document.getElementById('mapLoading').style.display = 'none';
       document.getElementById('map').style.display = 'block';
-      
-      // Set up directions panel
-      const directionsPanel = document.getElementById('directionsPanel');
-      if (directionsPanel) {
-        directionsPanel.style.display = 'none'; // Hide initially
-      }
       
       if (typeof window.initMap === 'function') {
         window.initMap();

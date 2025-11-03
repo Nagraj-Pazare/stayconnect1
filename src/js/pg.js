@@ -1,4 +1,4 @@
-// src/js/pg.js - COMPLETE ENHANCED VERSION
+// src/js/pg.js - COMPLETE FUNCTIONAL VERSION
 (function () {
   let map, marker, autocomplete;
   const defaultCenter = { lat: 21.1458, lng: 79.0882 };
@@ -7,6 +7,8 @@
   let allPGs = [];
   let currentLocation = null;
   let userMarker = null;
+  let isSearchActive = false;
+  let currentFilters = {};
 
   // Initialize location map
   window.initLocationMap = function() {
@@ -351,35 +353,60 @@
     loadAllPGs(col);
 
     // Initialize homepage features
-    initializeHomepageFeatures(col);
+    initializeHomepageFeatures();
+    
+    // Initialize search suggestions
+    initializeSearchSuggestions();
+    
+    // Initialize filter listeners
+    initializeFilterListeners();
   }
 
   // Load all PGs for search functionality
   function loadAllPGs(col) {
+    console.log('Loading all PGs from Firestore...');
+    
+    // Show loading state
+    const loadingState = document.getElementById('loadingState');
+    if (loadingState) {
+      loadingState.style.display = 'block';
+    }
+
     col.orderBy('timestamp', 'desc').onSnapshot(snapshot => {
       allPGs = [];
       snapshot.forEach(doc => {
+        const pgData = doc.data();
         allPGs.push({
           id: doc.id,
-          ...doc.data(),
-          // Add searchable text for better searching
-          searchText: `${doc.data().name || ''} ${doc.data().address || ''} ${doc.data().facilities?.join(' ') || ''}`.toLowerCase()
+          ...pgData,
+          searchText: `${pgData.name || ''} ${pgData.address || ''} ${pgData.facilities?.join(' ') || ''}`.toLowerCase(),
+          timestamp: pgData.timestamp?.toDate?.() || new Date(pgData.created_at) || new Date()
         });
       });
       
-      console.log(`✅ Loaded ${allPGs.length} PGs for search`);
-      renderPGs(allPGs); // Initial render
+      console.log(`✅ Loaded ${allPGs.length} PGs`);
       
-      // Update results count
-      updateResultsCount(allPGs.length);
+      // Hide loading state
+      if (loadingState) {
+        loadingState.style.display = 'none';
+      }
+      
+      // Show all PGs initially
+      showAllPGs();
+      
     }, err => {
       console.error('Error loading PGs:', err);
       showToast('Failed to load PGs', 'error');
+      
+      // Hide loading state on error
+      if (loadingState) {
+        loadingState.style.display = 'none';
+      }
     });
   }
 
   // Initialize homepage search and filter features
-  function initializeHomepageFeatures(col) {
+  function initializeHomepageFeatures() {
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
     const maxRentInput = document.getElementById('maxRent');
@@ -399,10 +426,16 @@
         }
       });
     }
+  }
 
-    // Real-time filtering
+  // Initialize filter listeners for real-time updates
+  function initializeFilterListeners() {
+    const maxRentInput = document.getElementById('maxRent');
+    const sortSelect = document.getElementById('sortBy');
+    const facilityFilter = document.getElementById('facilityFilter');
+
     if (maxRentInput) {
-      maxRentInput.addEventListener('input', applyFilters);
+      maxRentInput.addEventListener('input', debounce(applyFilters, 500));
     }
     if (sortSelect) {
       sortSelect.addEventListener('change', applyFilters);
@@ -410,6 +443,56 @@
     if (facilityFilter) {
       facilityFilter.addEventListener('change', applyFilters);
     }
+  }
+
+  // Debounce function for performance
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
+  // Show All PGs function
+  window.showAllPGs = function() {
+    console.log('Showing all PGs...');
+    
+    // Reset search and filters
+    isSearchActive = false;
+    currentFilters = {};
+    
+    // Clear search input
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.value = '';
+    }
+    
+    // Reset filter inputs
+    resetFilters();
+    
+    // Render all PGs
+    renderPGs(allPGs);
+    
+    // Update results count
+    updateResultsCount(allPGs.length);
+    
+    showToast(`Showing all ${allPGs.length} PGs`, 'info');
+  };
+
+  // Reset all filters
+  function resetFilters() {
+    const maxRentInput = document.getElementById('maxRent');
+    const sortSelect = document.getElementById('sortBy');
+    const facilityFilter = document.getElementById('facilityFilter');
+    
+    if (maxRentInput) maxRentInput.value = '';
+    if (sortSelect) sortSelect.value = 'newest';
+    if (facilityFilter) facilityFilter.value = '';
   }
 
   // Perform search function
@@ -421,40 +504,162 @@
     
     if (!searchInput) return;
 
-    const query = searchInput.value.trim().toLowerCase();
+    const query = searchInput.value.trim();
     
+    if (!query) {
+      showToast('Please enter a location to search', 'warning');
+      return;
+    }
+
     // Show loading state
     searchBtn.disabled = true;
     searchText.textContent = 'Searching...';
     searchSpinner.classList.remove('d-none');
+    isSearchActive = true;
 
-    setTimeout(() => {
-      let filteredPGs = allPGs;
-
-      // Text search
-      if (query) {
-        filteredPGs = filteredPGs.filter(pg => 
-          pg.searchText.includes(query) ||
-          (pg.name && pg.name.toLowerCase().includes(query)) ||
-          (pg.address && pg.address.toLowerCase().includes(query)) ||
-          (pg.facilities && pg.facilities.some(f => f.toLowerCase().includes(query)))
-        );
-      }
-
-      // Apply additional filters
-      filteredPGs = applyAdditionalFilters(filteredPGs);
-      
-      // Render results
-      renderPGs(filteredPGs);
-      
-      // Reset button state
-      searchBtn.disabled = false;
-      searchText.textContent = 'Search';
-      searchSpinner.classList.add('d-none');
-    }, 500);
+    // First try to geocode the search query
+    geocodeLocation(query)
+      .then(location => {
+        console.log('Geocoded location:', location);
+        
+        // Show PGs near this location
+        showNearbyPGs(location, query);
+        
+        // Reset button state
+        searchBtn.disabled = false;
+        searchText.textContent = 'Search';
+        searchSpinner.classList.add('d-none');
+      })
+      .catch(error => {
+        console.error('Geocoding failed:', error);
+        
+        // Fallback to text-based search
+        performTextSearch(query);
+        
+        // Reset button state
+        searchBtn.disabled = false;
+        searchText.textContent = 'Search';
+        searchSpinner.classList.add('d-none');
+      });
   }
 
-  // Apply additional filters (rent, facilities, etc.)
+  // Geocode location name to coordinates
+  function geocodeLocation(address) {
+    return new Promise((resolve, reject) => {
+      if (!window.google || !window.google.maps) {
+        reject(new Error('Google Maps not loaded'));
+        return;
+      }
+
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address: address }, (results, status) => {
+        if (status === 'OK' && results[0]) {
+          const location = results[0].geometry.location;
+          resolve({
+            lat: location.lat(),
+            lng: location.lng(),
+            address: results[0].formatted_address
+          });
+        } else {
+          reject(new Error('Location not found: ' + status));
+        }
+      });
+    });
+  }
+
+  // Show PGs near a specific location
+  function showNearbyPGs(location, searchQuery = '') {
+    if (!location || allPGs.length === 0) {
+      showToast('No location data available', 'error');
+      return;
+    }
+    
+    const radius = getSearchRadius(searchQuery);
+    const nearbyPGs = allPGs.filter(pg => {
+      if (!pg.latitude || !pg.longitude) return false;
+      
+      const distance = calculateDistance(
+        location.lat, location.lng,
+        pg.latitude, pg.longitude
+      );
+      
+      pg.distance = distance;
+      pg.distanceText = `${distance.toFixed(1)} km away`;
+      return distance <= radius;
+    });
+    
+    // Sort by distance
+    nearbyPGs.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+    
+    if (nearbyPGs.length === 0) {
+      showToast(`No PGs found within ${radius}km of "${searchQuery}"`, 'warning');
+      performTextSearch(searchQuery);
+      return;
+    }
+    
+    renderPGs(nearbyPGs);
+    showToast(`Found ${nearbyPGs.length} PGs near "${searchQuery}"`, 'success');
+  }
+
+  // Dynamic search radius based on area type
+  function getSearchRadius(searchQuery = '') {
+    const query = searchQuery.toLowerCase();
+    
+    // Larger radius for cities, smaller for specific areas
+    if (query.includes('city') || query.includes('nagpur') || query.includes('mumbai') || query.includes('delhi')) {
+      return 20; // 20km for cities
+    } else if (query.includes('college') || query.includes('university') || query.includes('campus')) {
+      return 5; // 5km for educational areas
+    } else if (query.includes('near') || query.includes('close')) {
+      return 3; // 3km for "near me" searches
+    } else {
+      return 10; // 10km default
+    }
+  }
+
+  // Fallback text-based search
+  function performTextSearch(query) {
+    const searchQuery = query.toLowerCase();
+    let filteredPGs = allPGs.filter(pg => {
+      return pg.searchText.includes(searchQuery) ||
+             (pg.name && pg.name.toLowerCase().includes(searchQuery)) ||
+             (pg.address && pg.address.toLowerCase().includes(searchQuery)) ||
+             (pg.facilities && pg.facilities.some(f => f.toLowerCase().includes(searchQuery)));
+    });
+
+    // Apply additional filters
+    filteredPGs = applyAdditionalFilters(filteredPGs);
+    
+    if (filteredPGs.length === 0) {
+      showToast(`No PGs found matching "${query}"`, 'warning');
+    } else {
+      showToast(`Found ${filteredPGs.length} PGs matching "${query}"`, 'success');
+    }
+    
+    renderPGs(filteredPGs);
+  }
+
+  // Apply filters function
+  window.applyFilters = function() {
+    console.log('Applying filters...');
+    
+    let filteredPGs = allPGs;
+    
+    // Apply text search if active
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput && searchInput.value.trim() && isSearchActive) {
+      const query = searchInput.value.trim().toLowerCase();
+      filteredPGs = filteredPGs.filter(pg => pg.searchText.includes(query));
+    }
+    
+    // Apply additional filters
+    filteredPGs = applyAdditionalFilters(filteredPGs);
+    
+    renderPGs(filteredPGs);
+    showToast(`Applied filters to ${filteredPGs.length} PGs`, 'info');
+  };
+
+  // Apply additional filters
   function applyAdditionalFilters(pgs) {
     let filtered = [...pgs];
     
@@ -481,28 +686,36 @@
       case 'rent_high':
         filtered.sort((a, b) => (b.rent || 0) - (a.rent || 0));
         break;
+      case 'distance':
+        // Sort by distance if available, otherwise by timestamp
+        filtered.sort((a, b) => {
+          if (a.distance !== undefined && b.distance !== undefined) {
+            return a.distance - b.distance;
+          }
+          return new Date(b.timestamp) - new Date(a.timestamp);
+        });
+        break;
       case 'newest':
       default:
-        // Already sorted by timestamp from Firestore
+        filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         break;
     }
     
     return filtered;
   }
 
-  // Apply all filters
-  function applyFilters() {
-    let filteredPGs = allPGs;
-    filteredPGs = applyAdditionalFilters(filteredPGs);
-    renderPGs(filteredPGs);
-  }
-
   // Render PGs to the page
   function renderPGs(pgs) {
     const container = document.getElementById('pgContainer');
     const noResults = document.getElementById('noResults');
+    const loadingState = document.getElementById('loadingState');
     
     if (!container) return;
+
+    // Hide loading state
+    if (loadingState) {
+      loadingState.style.display = 'none';
+    }
 
     container.innerHTML = '';
     
@@ -530,6 +743,14 @@
     const displayFacilities = facilities.slice(0, 3);
     const remaining = facilities.length - 3;
     
+    // Show distance if available
+    const distanceInfo = pg.distanceText ? `
+      <div class="distance-badge">
+        <i class="fas fa-map-marker-alt"></i>
+        ${pg.distanceText}
+      </div>
+    ` : '';
+    
     return `
       <div class="pg-card" data-pg-id="${pg.id}">
         <img src="${pg.photo_url || 'images/default_pg.jpg'}" alt="${escapeHtml(pg.name)}" 
@@ -537,6 +758,7 @@
         <div class="details">
           <h5>${escapeHtml(pg.name)}</h5>
           <div class="price">₹${pg.rent?.toLocaleString() || 'N/A'}/month</div>
+          ${distanceInfo}
           <div class="address">${escapeHtml(pg.address || 'Address not specified')}</div>
           
           ${facilities.length ? `
@@ -545,11 +767,6 @@
               ${remaining > 0 ? `<span class="facility-tag">+${remaining} more</span>` : ''}
             </div>
           ` : ''}
-          
-          <div class="mt-2 text-muted small">
-            <i class="fas fa-map-marker-alt"></i>
-            ${pg.latitude && pg.longitude ? 'Location available' : 'Location not set'}
-          </div>
           
           <div class="actions">
             <a class="btn btn-primary" href="pg_details.html?id=${pg.id}">View Details</a>
@@ -566,24 +783,14 @@
   function updateResultsCount(count) {
     const resultsCount = document.getElementById('resultsCount');
     if (resultsCount) {
-      resultsCount.textContent = `${count} PG${count !== 1 ? 's' : ''} found`;
+      const countElement = resultsCount.querySelector('.count-text');
+      if (countElement) {
+        countElement.textContent = `${count} PG${count !== 1 ? 's' : ''} found`;
+      } else {
+        resultsCount.textContent = `${count} PG${count !== 1 ? 's' : ''} found`;
+      }
     }
   }
-
-  // Show all PGs (reset search)
-  window.showAllPGs = function() {
-    const searchInput = document.getElementById('searchInput');
-    const maxRentInput = document.getElementById('maxRent');
-    const sortSelect = document.getElementById('sortBy');
-    const facilityFilter = document.getElementById('facilityFilter');
-    
-    if (searchInput) searchInput.value = '';
-    if (maxRentInput) maxRentInput.value = '';
-    if (sortSelect) sortSelect.value = 'newest';
-    if (facilityFilter) facilityFilter.value = '';
-    
-    renderPGs(allPGs);
-  };
 
   // Use current location for search
   window.useCurrentLocation = function() {
@@ -614,11 +821,11 @@
           document.getElementById('searchInput').value = address;
           
           // Show nearby PGs
-          showNearbyPGs(currentLocation);
+          showNearbyPGs(currentLocation, 'your location');
           
         } catch (error) {
           showToast('Found your location! Showing nearby PGs.', 'success');
-          showNearbyPGs(currentLocation);
+          showNearbyPGs(currentLocation, 'your location');
         }
         
         // Reset button state
@@ -638,43 +845,6 @@
     );
   };
 
-  // Show PGs near a location
-  function showNearbyPGs(location) {
-    if (!location || allPGs.length === 0) return;
-    
-    // Calculate distances and show PGs within 10km
-    const nearbyPGs = allPGs.filter(pg => {
-      if (!pg.latitude || !pg.longitude) return false;
-      
-      const distance = calculateDistance(
-        location.lat, location.lng,
-        pg.latitude, pg.longitude
-      );
-      
-      pg.distance = distance; // Store distance for sorting
-      return distance <= 10; // Within 10km
-    });
-    
-    // Sort by distance
-    nearbyPGs.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
-    
-    renderPGs(nearbyPGs);
-    showToast(`Found ${nearbyPGs.length} PGs within 10km`, 'success');
-  }
-
-  // Calculate distance between two coordinates (Haversine formula)
-  function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c; // Distance in km
-  }
-
   // Reverse geocode coordinates to address
   async function reverseGeocodePosition(position) {
     if (!window.google || !window.google.maps) {
@@ -693,10 +863,116 @@
     });
   }
 
+  // Calculate distance between two coordinates (Haversine formula)
+  function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distance in km
+  }
+
   // Focus on specific PG on map
   window.focusOnPG = function(pgId) {
     // This will be used by the map page
     localStorage.setItem('focusPG', pgId);
+  };
+
+  // Initialize search suggestions
+  function initializeSearchSuggestions() {
+    const searchInput = document.getElementById('searchInput');
+    if (!searchInput) return;
+
+    // Create suggestions container
+    const suggestionsContainer = document.createElement('div');
+    suggestionsContainer.className = 'search-suggestions';
+    searchInput.parentNode.appendChild(suggestionsContainer);
+
+    // Popular searches
+    const popularSearches = [
+      'Near College',
+      'Near University', 
+      'Nagpur',
+      'With WiFi',
+      'With Food',
+      'AC Rooms',
+      'Near Railway Station',
+      'Near Bus Stand'
+    ];
+
+    searchInput.addEventListener('focus', function() {
+      if (this.value === '') {
+        showSearchSuggestions(popularSearches);
+      }
+    });
+
+    searchInput.addEventListener('input', function() {
+      if (this.value.length > 2) {
+        showDynamicSuggestions(this.value);
+      } else if (this.value === '') {
+        showSearchSuggestions(popularSearches);
+      } else {
+        suggestionsContainer.style.display = 'none';
+      }
+    });
+
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+        suggestionsContainer.style.display = 'none';
+      }
+    });
+
+    function showSearchSuggestions(suggestions) {
+      suggestionsContainer.innerHTML = suggestions.map(suggestion => `
+        <div class="search-suggestion" onclick="selectSuggestion('${suggestion}')">
+          <div class="name">🔍 ${suggestion}</div>
+        </div>
+      `).join('');
+      suggestionsContainer.style.display = 'block';
+    }
+
+    function showDynamicSuggestions(query) {
+      const matchingPGs = allPGs.filter(pg => 
+        pg.name.toLowerCase().includes(query.toLowerCase()) ||
+        pg.address.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 5);
+
+      const suggestions = matchingPGs.map(pg => ({
+        name: pg.name,
+        address: pg.address,
+        type: 'PG'
+      }));
+
+      if (suggestions.length > 0) {
+        suggestionsContainer.innerHTML = suggestions.map(item => `
+          <div class="search-suggestion" onclick="selectPGsuggestion('${item.name}')">
+            <div class="name">🏠 ${item.name}</div>
+            <div class="address">${item.address}</div>
+          </div>
+        `).join('');
+        suggestionsContainer.style.display = 'block';
+      } else {
+        suggestionsContainer.style.display = 'none';
+      }
+    }
+  }
+
+  // Global functions for suggestions
+  window.selectSuggestion = function(suggestion) {
+    document.getElementById('searchInput').value = suggestion;
+    document.querySelector('.search-suggestions').style.display = 'none';
+    performSearch();
+  };
+
+  window.selectPGsuggestion = function(pgName) {
+    document.getElementById('searchInput').value = pgName;
+    document.querySelector('.search-suggestions').style.display = 'none';
+    performSearch();
   };
 
   // Utility function for HTML escaping

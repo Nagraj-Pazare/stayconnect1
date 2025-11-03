@@ -1,89 +1,185 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to Firebase Hosting</title>
+<html lang="en">
 
-    <!-- update the version number as needed -->
-    <script defer src="/__/firebase/12.5.0/firebase-app-compat.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/12.5.0/firebase-auth-compat.js"></script>
-    <script defer src="/__/firebase/12.5.0/firebase-database-compat.js"></script>
-    <script defer src="/__/firebase/12.5.0/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/12.5.0/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/12.5.0/firebase-messaging-compat.js"></script>
-    <script defer src="/__/firebase/12.5.0/firebase-storage-compat.js"></script>
-    <script defer src="/__/firebase/12.5.0/firebase-analytics-compat.js"></script>
-    <script defer src="/__/firebase/12.5.0/firebase-remote-config-compat.js"></script>
-    <script defer src="/__/firebase/12.5.0/firebase-performance-compat.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>StayConnect | Find PGs Near You</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
 
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="message">
-      <h2>Welcome</h2>
-      <h1>Firebase Hosting Setup Complete</h1>
-      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
-      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
+<body>
+  <!-- Header -->
+  <div id="header-placeholder"></div>
+
+  <!-- Hero Section with Enhanced Search -->
+  <section class="hero">
+    <div class="overlay">
+      <div class="container text-center text-light">
+        <h1 class="hero-title">Find Your Perfect Stay</h1>
+        <p class="hero-subtitle">Discover verified PGs, hostels, and flats near your college or location</p>
+
+        <!-- Enhanced Search Bar -->
+        <div class="search-container">
+          <div class="search-bar-wrapper">
+            <div class="search-bar">
+              <input type="text" id="searchInput" class="form-control search-input"
+                placeholder="Enter area, college, PG name, or facilities..." autocomplete="off" />
+              <button class="btn btn-light search-btn" id="searchBtn" onclick="performSearch()">
+                <span id="searchText">Search</span>
+                <div id="searchSpinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status"></div>
+              </button>
+            </div>
+            <!-- Search suggestions will be added here dynamically -->
+          </div>
+
+          <div class="search-actions mt-3">
+            <button class="btn btn-outline-light btn-sm me-2 location-btn" onclick="useCurrentLocation()">
+              <i class="fas fa-location-crosshairs"></i> Use My Location
+            </button>
+            <button class="btn btn-outline-light btn-sm show-all-btn" onclick="showAllPGs()">
+              <i class="fas fa-sync-alt"></i> Show All PGs
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
+  </section>
 
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-        // // The Firebase SDK is initialized and available here!
-        //
-        // firebase.auth().onAuthStateChanged(user => { });
-        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-        // firebase.firestore().doc('/foo/bar').get().then(() => { });
-        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-        // firebase.messaging().requestPermission().then(() => { });
-        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-        // firebase.analytics(); // call to activate
-        // firebase.analytics().logEvent('tutorial_completed');
-        // firebase.performance(); // call to activate
-        //
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+  <!-- Filters Section -->
+<section class="filters-section container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="filters-card card">
+                <div class="card-body">
+                    <h6 class="filters-title mb-3"><i class="fas fa-filter me-2"></i>Filter PGs</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label filter-label">Max Rent (₹)</label>
+                            <input type="number" id="maxRent" class="form-control filter-input" placeholder="Any rent" min="0" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label filter-label">Sort By</label>
+                            <select id="sortBy" class="form-select filter-select">
+                                <option value="newest">Newest First</option>
+                                <option value="rent_low">Rent: Low to High</option>
+                                <option value="rent_high">Rent: High to Low</option>
+                                <option value="distance">Distance: Nearest First</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label filter-label">Facilities</label>
+                            <select id="facilityFilter" class="form-select filter-select">
+                                <option value="">All Facilities</option>
+                                <option value="WiFi">WiFi</option>
+                                <option value="Food">Food</option>
+                                <option value="AC">AC</option>
+                                <option value="Laundry">Laundry</option>
+                                <option value="Parking">Parking</option>
+                                <option value="Security">Security</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Simple reset button only -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-end">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="showAllPGs()">
+                                    <i class="fas fa-sync-alt me-1"></i>Show All PGs
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
-        try {
-          let app = firebase.app();
-          let features = [
-            'auth', 
-            'database', 
-            'firestore',
-            'functions',
-            'messaging', 
-            'storage', 
-            'analytics', 
-            'remoteConfig',
-            'performance',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-        } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
+  <!-- Listings Section -->
+  <section class="pg-list container my-5">
+    <div class="section-header d-flex justify-content-between align-items-center mb-4">
+      <h2 class="section-title">Available PGs</h2>
+      <div id="resultsCount" class="results-count text-muted">
+        <i class="fas fa-home me-1"></i><span class="count-text">Loading...</span>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading PGs...</span>
+      </div>
+      <p class="mt-2 text-muted">Loading available PGs...</p>
+    </div>
+
+    <!-- PG Container -->
+    <div id="pgContainer" class="row g-4"></div>
+
+    <!-- No Results State -->
+    <div id="noResults" class="no-results text-center py-5 d-none">
+      <div class="no-results-content">
+        <i class="fas fa-search fa-3x mb-3 text-muted"></i>
+        <h4 class="no-results-title">No PGs Found</h4>
+        <p class="no-results-text text-muted">Try different search terms or filters</p>
+        <button class="btn btn-primary mt-2" onclick="showAllPGs()">
+          <i class="fas fa-sync-alt me-1"></i>Show All PGs
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <div id="footer-placeholder"></div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+  <!-- Google Maps for search suggestions -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB8qAgA-q9hOa4Kbn2zsPeRBZsKaWp7TfA&libraries=places"
+    async defer></script>
+
+  <!-- Config + App + Modules -->
+  <script src="../config/firebaseConfig.js"></script>
+  <script src="../src/js/app.js"></script>
+  <script src="../src/js/utils.js"></script>
+  <script src="../src/js/auth.js"></script>
+  <script src="../src/js/pg.js"></script>
+
+  <!-- Bootstrap bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // Load components
+    (async function loadComponents() {
+      try {
+        const head = await fetch('../src/components/navbar.html').then(r => r.text());
+        const foot = await fetch('../src/components/footer.html').then(r => r.text());
+        document.getElementById('header-placeholder').innerHTML = head;
+        document.getElementById('footer-placeholder').innerHTML = foot;
+      } catch (err) {
+        console.error('Error loading components:', err);
+      }
+    })();
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function () {
+      // Hide loading state when Firebase is ready
+      window.addEventListener('firebaseReady', function () {
+        const loadingState = document.getElementById('loadingState');
+        if (loadingState) {
+          loadingState.style.display = 'none';
         }
       });
-    </script>
-  </body>
+    });
+  </script>
+</body>
+
 </html>
